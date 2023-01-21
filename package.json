@@ -1,0 +1,36 @@
+{
+  "name": "cojasclib2",
+  "version": "1.0.0",
+  "description": "Common Javascript Standard for charting libraries",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npx tsc",
+    "dev": "npx tsc --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zeerobug/cojasclib2.git"
+  },
+  "keywords": [
+    "Chart",
+    "chartjs"
+  ],
+  "author": "Thomas Vié <thomas@iteas.co> (https://iteas.co/)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/zeerobug/cojasclib2/issues"
+  },
+  "homepage": "https://github.com/zeerobug/cojasclib2#readme",
+  "dependencies": {
+    "typescript": "^4.9.4"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.4",
+    "@types/mocha": "^10.0.1",
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0",
+    "ts-node": "^10.9.1"
+  }
+}

@@ -1,21 +1,27 @@
-export default class Dataset {
-  label: String;
-  data: Array<Number>;
-  color: String;
-  id: String | number;
+import { DataPointType, DataSetOptions } from './types';
+import DataPoint from './dataPoint';
 
-  constructor(id) {
-    this.label = "";
-    this.data = [];
+export default class Dataset {
+  id: String | number;
+  label?: String;
+  data?: Array<DataPointType>;
+  color?: String;
+  options?: DataSetOptions;
+
+  constructor(id, label = '', color = '', options = {}) {
     this.id = id;
+    this.label = label;
+    this.color = color;
+    this.options = options;
+    this.data = [];
   }
 
   get() {
     return this;
   }
 
-  addPoint(value: Number) {
-    this.data.push(value);
+  addPoint(point: DataPointType) {
+    this.data.push(point);
   }
 
   setColor(color) {

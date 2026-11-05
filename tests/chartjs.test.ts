@@ -1,5 +1,5 @@
 import { DatasetFactory } from '../src/datasetFactory';
-import chartjs from '../plugins/chartjs.ts';
+import chartjs from '../src/plugins/chartjs';
 
 describe('Dataset factory', () => {
   let datasetfactory, dataset;

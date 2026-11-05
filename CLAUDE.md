@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-cojasclib2 ("Common JavaScript Standard for charting libraries") is a small TypeScript library: one library-independent data model for charts (datasets, points, colors) plus a plugin layer that converts that model into a specific charting library's config (Chart.js first). Early development; the Chart.js plugin is a skeleton.
+cojasclib2 ("Common JavaScript Standard for charting libraries") is a small TypeScript library: one library-independent data model for charts (datasets, points, colors) plus a plugin layer that converts that model into a specific charting library's config. Chart.js is the only plugin so far.
 
 ## Commands
 
@@ -27,14 +27,13 @@ Environment notes:
 
 ## Architecture
 
-- **`DatasetFactory`** (`src/datasetFactory.ts`) is the entry point and the only public export (`src/index.ts`). It owns a map of `Dataset`s keyed by id (`addDataset` is idempotent per id), a `datasetCount`, and the active color array. When no color is passed, `getColor()` picks `colors[datasetCount]`, so color assignment is tied to the count, not to a separate cursor.
-- **`Dataset`** / **`DataPoint`** (`src/dataset.ts`, `src/dataPoint.ts`) are plain containers. Points are usually passed as plain objects matching `DataPointType`; shared shapes live in `src/types.ts`.
-- **Colors** (`src/colors/`): palette files export named arrays (e.g. `Tableau20`, `YlGn3`). `colorUtils.scheme(name)` currently looks names up **only in the Tableau module**, so Brewer/Office palettes are imported but not selectable via `setScheme` yet.
-- **Plugins**: `PluginClass` (`src/pluginClass.ts`) takes a `DatasetFactory` and exposes `transformer()` (common model -> library format) and `renderer()` (returns the library config object). Library adapters go in `src/plugins/` and extend it (`src/plugins/chartjs.ts`).
+- **`DatasetFactory`** (`src/datasetFactory.ts`) is the entry point. It owns a map of `Dataset`s keyed by id (`addDataset` is idempotent per id), a `datasetCount`, and the active color array. Auto colors come from a private `colorIndex` cursor that only increments, so deletions never cause color reuse; `getColor(i)` wraps modulo the scheme length.
+- **`Dataset`** / **`DataPoint`** (`src/dataset.ts`, `src/dataPoint.ts`) are plain containers; `Dataset` mutators are chainable. Points are usually plain objects matching `DataPointType`; `addPoint` normalizes a missing `options` to `{}`. Shared shapes live in `src/types.ts`, and plugins depend on `DatasetFactoryType` from there rather than on the class.
+- **Colors** (`src/colors/`): palette files export named arrays (vendored; they use `export var` and are the only tslint failures — leave them). `colorUtils` merges Brewer, Office and Tableau into one lookup (names are unique across files — keep it that way when adding palettes); unknown names throw.
+- **Plugins**: abstract `PluginClass<TData, TConfig>` (`src/pluginClass.ts`) with `transformer()` (common model -> library data) and `renderer()` (full library config). `src/plugins/chartjs.ts` targets Chart.js v3/v4 without depending on `chart.js`: output types are defined locally, and `render(Chart, item)` takes the constructor as an argument. Chart types fall into two data shapes — `{x, y}` point objects (line/bar/scatter/bubble; line/bar also get a `labels` array) and label-indexed value arrays (pie/doughnut/polarArea/radar). `dataset.options` are spread last so users can override any generated property.
+- `src/index.ts` re-exports everything public; add new modules there.
 
-## Known pitfalls in the current code
+## Notes
 
-- `src/index.ts` imports `"./datasetfactory"` (lowercase) while the file is `datasetFactory.ts` — works on macOS's case-insensitive FS, breaks on Linux/CI.
-- `tests/chartjs.test.ts` imports the Chart.js plugin but its only test is a copy of a dataset test; the plugin itself is untested.
-- `getColor()` returns `undefined` once `datasetCount` exceeds the palette length, and `delDataset` decrements the count even for unknown ids, which causes color reuse.
-- `dist/` is committed and only rebuilt manually — run `npm run build` if a change should be reflected there. Stale `package-lock.json` and `yarn.lock` are also committed; `pnpm-lock.yaml` is the one in use.
+- `dist/` is committed and only rebuilt manually — run `pnpm run build` after source changes that should ship (consumers install from GitHub and use `dist/` directly). Stale `package-lock.json` and `yarn.lock` are also committed; `pnpm-lock.yaml` is the one in use.
+- The library has no runtime dependencies; keep build/test tooling in `devDependencies`.

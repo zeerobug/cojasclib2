@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>cojasclib2 — Chart.js sample</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 0; padding: 24px; background: #f6f7f9; color: #1f2933; }
+      h1 { margin: 0 0 4px; font-size: 22px; }
+      p.lead { margin: 0 0 20px; color: #52606d; }
+      .controls { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+      label { font-size: 14px; display: flex; flex-direction: column; gap: 4px; }
+      select { padding: 6px 8px; font-size: 14px; }
+      .grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; }
+      .card { background: #fff; border: 1px solid #e4e7eb; border-radius: 8px; padding: 16px; }
+      .chart-box { position: relative; height: 420px; }
+      pre { margin: 0; max-height: 420px; overflow: auto; font-size: 12px; }
+      .error { color: #b42318; white-space: pre-wrap; }
+      @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <h1>cojasclib2 sample</h1>
+    <p class="lead">
+      The datasets are built once with <code>DatasetFactory</code>. The <code>Chartjs</code> plugin turns them into
+      a Chart.js config for whichever chart type you pick.
+    </p>
+
+    <div class="controls">
+      <label>
+        Chart type
+        <select id="type">
+          <option>line</option>
+          <option>bar</option>
+          <option>scatter</option>
+          <option>bubble</option>
+          <option>radar</option>
+          <option>pie</option>
+          <option>doughnut</option>
+          <option>polarArea</option>
+        </select>
+      </label>
+      <label>
+        Color scheme
+        <select id="scheme">
+          <option>Tableau20</option>
+          <option>Tableau10</option>
+          <option>ColorBlind10</option>
+          <option>Paired12</option>
+          <option>SetOne9</option>
+          <option>YlGnBu5</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="grid">
+      <div class="card"><div class="chart-box"><canvas id="chart"></canvas></div></div>
+      <div class="card">
+        <strong>Generated config (<code>plugin.renderer()</code>)</strong>
+        <pre id="config"></pre>
+      </div>
+    </div>
+
+    <script>
+      // Minimal CommonJS loader so the page can use dist/ as-is (tsc emits CommonJS).
+      // Needs an HTTP server, because browsers block fetch() on file:// URLs.
+      async function loadCommonJS(entry) {
+        const sources = {};
+        const resolve = (from, spec) => new URL(spec.endsWith('.js') ? spec : spec + '.js', from).href;
+
+        async function fetchTree(url) {
+          if (url in sources) return;
+          sources[url] = null;
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`Failed to load ${url} (${res.status}). Did you run "pnpm run build"?`);
+          const src = await res.text();
+          sources[url] = src;
+          const deps = [...src.matchAll(/require\(["']([^"']+)["']\)/g)].map((m) => resolve(url, m[1]));
+          await Promise.all(deps.map(fetchTree));
+        }
+
+        const cache = {};
+        function run(url) {
+          if (cache[url]) return cache[url].exports;
+          const module = (cache[url] = { exports: {} });
+          const require = (spec) => run(resolve(url, spec));
+          new Function('exports', 'require', 'module', sources[url])(module.exports, require, module);
+          return module.exports;
+        }
+
+        const entryUrl = new URL(entry, location.href).href;
+        await fetchTree(entryUrl);
+        return run(entryUrl);
+      }
+
+      // Sample data: the same model is used for every chart type.
+      function buildFactory(lib, scheme) {
+        const { DatasetFactory } = lib;
+        const factory = new DatasetFactory({ scheme });
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+
+        factory
+          .addDataset('sales', 'Sales (k€)')
+          .addPoints(months.map((x, i) => ({ x, y: [120, 135, 150, 142, 170, 188][i], z: 4 + i * 2 })));
+
+        factory
+          .addDataset('costs', 'Costs (k€)', '', { borderDash: [6, 4] }) // dataset.options go straight to Chart.js
+          .addPoints(months.map((x, i) => ({ x, y: [80, 95, 90, 110, 105, 120][i], z: 6 })))
+          .addPoint({ x: 'Jul', y: 160, z: 12, options: { color: '#d62728' } }); // per-point color override
+
+        factory
+          .addDataset('margin', 'Margin (k€)')
+          .addPoints(months.map((x, i) => ({ x, y: [40, 40, 60, 32, 65, 68][i], z: 3 })));
+
+        return factory;
+      }
+
+      // scatter/bubble need numeric x values, so their category labels are mapped to indexes.
+      function numericX(factory) {
+        factory.getDatasets().forEach((ds) =>
+          ds.data.forEach((p, i) => {
+            if (typeof p.x === 'string') p.x = i + 1;
+          }),
+        );
+      }
+
+      (async () => {
+        const lib = await loadCommonJS('../dist/index.js');
+        const { Chartjs } = lib;
+        const typeEl = document.getElementById('type');
+        const schemeEl = document.getElementById('scheme');
+        const configEl = document.getElementById('config');
+        let chart;
+
+        function draw() {
+          const type = typeEl.value;
+          const factory = buildFactory(lib, schemeEl.value);
+          if (type === 'scatter' || type === 'bubble') numericX(factory);
+
+          const plugin = new Chartjs(factory, {
+            type,
+            fillOpacity: 0.15,
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } },
+          });
+
+          if (chart) chart.destroy();
+          chart = plugin.render(Chart, document.getElementById('chart'));
+          configEl.textContent = JSON.stringify(plugin.renderer(), null, 2);
+        }
+
+        typeEl.addEventListener('change', draw);
+        schemeEl.addEventListener('change', draw);
+        draw();
+      })().catch((err) => {
+        const el = document.getElementById('config');
+        el.className = 'error';
+        el.textContent = err.stack || String(err);
+      });
+    </script>
+  </body>
+</html>

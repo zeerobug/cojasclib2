@@ -1,19 +1,20 @@
 import { DatasetFactoryType } from './types';
 
-interface pluginInterface {
-  transformer(): void;
-  renderer(): Object;
+export interface PluginInterface<TData, TConfig> {
+  /** Converts the common data model into the target library's data format. */
+  transformer(): TData;
+  /** Returns the complete configuration object for the target library. */
+  renderer(): TConfig;
 }
 
-export default class PluginClass implements pluginInterface {
+export default abstract class PluginClass<TData = any, TConfig = any> implements PluginInterface<TData, TConfig> {
   datasetFactory: DatasetFactoryType;
-  constructor(datasetFactory) {
+
+  constructor(datasetFactory: DatasetFactoryType) {
     this.datasetFactory = datasetFactory;
   }
 
-  transformer() {}
+  abstract transformer(): TData;
 
-  renderer() {
-    return {};
-  }
+  abstract renderer(): TConfig;
 }

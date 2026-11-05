@@ -1,12 +1,12 @@
-import { DataPointType, DataPointOptions } from './types';
+import { DataPointType, DataPointOptions, XValue } from './types';
 
-export default class DataPoint {
-  x: Number;
-  y?: Number;
-  z?: Number;
+export default class DataPoint implements DataPointType {
+  x: XValue;
+  y?: number;
+  z?: number;
   options: DataPointOptions;
 
-  constructor(x, y, z, options) {
+  constructor(x: XValue, y?: number, z?: number, options: DataPointOptions = {}) {
     this.x = x;
     this.y = y;
     this.z = z;

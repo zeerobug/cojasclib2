@@ -18,7 +18,7 @@
     "chartjs"
   ],
   "author": "Thomas Vié <thomas@iteas.co> (https://iteas.co/)",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/zeerobug/cojasclib2/issues"
   },
